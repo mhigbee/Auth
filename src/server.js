@@ -29,6 +29,29 @@ const sendUserError = (err, res) => {
   }
 };
 
+const ensureLogin = (req, res, next) => {
+  const { username } = req.session;
+  if (!username) {
+    sendUserError('must be logged in', res);
+    return;
+  }
+
+  User.findOne({ username }, (err, user) => {
+    if (err) {
+      sendUserError(err, res);
+      return;
+    }
+
+    if (!user) {
+      sendUserError('must be logged in', res);
+      return;
+    }
+
+    req.user = user;
+    next();
+  });
+};
+
 server.post('/users', (req, res) => {
   const { username, password } = req.body;
   if (!username || !password) {
@@ -55,14 +78,27 @@ server.post('/log-in', (req, res) => {
     if (user === null) return sendUserError('No User Found', res);
     bcrypt.compare(password, user.passwordHash, (error, bcryptRes) => {
       if (error) return sendUserError('Error wrong password', res);
-
+      req.session.username = user.username;
       res.json({ success: bcryptRes });
     });
   });
 });
 
+const restrictAcces = (req, res, next) => {
+  const path = req.path;
+  if (/restricted/.test(path)) {
+    if (!req.session.username) {
+      sendUserError('Must be logged in to access', res);
+      return;
+    }
+  }
+  next();
+};
+
+server.use(restrictAcces);
+
 // TODO: add local middleware to this route to ensure the user is logged in
-server.get('/me', (req, res) => {
+server.get('/me', ensureLogin, (req, res) => {
   // Do NOT modify this route handler in any way.
   res.json(req.user);
 });
