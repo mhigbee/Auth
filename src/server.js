@@ -19,8 +19,8 @@ server.use(session({
 /* Sends the given err, a string or an object, to the client. Sets the status
  * code appropriately. */
 
-const hash = (password, BCRYPT_COST) => {
-  return bcrypt.hashSync(password, BCRYPT_COST);
+const hash = (password, cost) => {
+  return bcrypt.hashSync(password, cost);
 };
 const sendUserError = (err, res) => {
   res.status(STATUS_USER_ERROR);
@@ -36,17 +36,17 @@ const sendUserError = (err, res) => {
 server.post('/users', (req, res) => {
   const { username, password } = req.body;
   if (!username || !password) {
-    sendUserError("Please make a username or password", res);
+    sendUserError('Please make a username or password', res);
     return;
-  };
+  }
   const passwordHash = hash(password, BCRYPT_COST);
-  const newUser = new User({username, passwordHash});
+  const newUser = new User({ username, passwordHash });
   newUser.save((err, savedUser) => {
-    if(err){
+    if (err) {
       sendUserError(err, res);
       return;
     }
-    res.json({savedUser});
+    res.json({ savedUser });
   });
 });
 
