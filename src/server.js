@@ -19,9 +19,7 @@ server.use(session({
 /* Sends the given err, a string or an object, to the client. Sets the status
  * code appropriately. */
 
-const hash = (password, cost) => {
-  return bcrypt.hashSync(password, cost);
-};
+
 const sendUserError = (err, res) => {
   res.status(STATUS_USER_ERROR);
   if (err && err.message) {
@@ -31,27 +29,36 @@ const sendUserError = (err, res) => {
   }
 };
 
-// TODO: implement routes
-
 server.post('/users', (req, res) => {
   const { username, password } = req.body;
   if (!username || !password) {
-    sendUserError('Please make a username or password', res);
+    sendUserError('Please provide a username and password', res);
     return;
   }
-  const passwordHash = hash(password, BCRYPT_COST);
-  const newUser = new User({ username, passwordHash });
-  newUser.save((err, savedUser) => {
-    if (err) {
-      sendUserError(err, res);
-      return;
-    }
-    res.json({ savedUser });
+  bcrypt.hash(password, BCRYPT_COST, (err, hash) => {
+    if (err) return sendUserError('Error saving password', res);
+    const newUser = new User({ username, passwordHash: hash });
+    newUser.save((userErr, user) => {
+      if (userErr) return sendUserError('Enter a unique username', res);
+      res.json(user);
+    });
   });
 });
 
 server.post('/log-in', (req, res) => {
+  const { username, password } = req.body;
+  if (!username || !password) {
+    sendUserError('Please provide a username and password', res);
+    return;
+  }
+  User.findOne({ username }, (err, user) => {
+    if (user === null) return sendUserError('No User Found', res);
+    bcrypt.compare(password, user.passwordHash, (error, bcryptRes) => {
+      if (error) return sendUserError('Error wrong password', res);
 
+      res.json({ success: bcryptRes });
+    });
+  });
 });
 
 // TODO: add local middleware to this route to ensure the user is logged in

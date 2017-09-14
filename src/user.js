@@ -1,5 +1,5 @@
 const mongoose = require('mongoose');
-
+const uniqueValidator = require('mongoose-unique-validator');
 // Clear out mongoose's model cache to allow --watch to work for tests:
 // https://github.com/Automattic/mongoose/issues/1251
 mongoose.models = {};
@@ -14,12 +14,11 @@ const UserSchema = new mongoose.Schema({
     type: String,
     required: true,
     unique: true,
-    min: 6
   },
   passwordHash: {
     type: String,
     required: true
   }
 });
-
+UserSchema.plugin(uniqueValidator);
 module.exports = mongoose.model('User', UserSchema);
